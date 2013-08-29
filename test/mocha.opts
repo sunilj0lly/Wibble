@@ -1,0 +1,4 @@
+//run all tests in all sub folders http://bpinto.github.io/posts/running-mocha-tests-on-subdirectories/
+
+cat mocha.opts
+--recursive test
