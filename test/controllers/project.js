@@ -4,6 +4,36 @@ var ProjectModel = require('../../models/project')
 var sinon = require("sinon");
 var mongoose = require('mongoose');
 
+var PROJECT_NAME = "testProjectName";
+
+function getRequestStub() {
+	return {
+		body: {
+			projectName: PROJECT_NAME
+		},
+		assert: function(val1, val2) {
+			return {
+				notEmpty: function() {
+					return true;
+				}
+			}
+		},
+		validationErrors: function() {
+			return null;
+		}
+	};
+}
+
+function fetchProjectsFromDB(done, callback) {
+	ProjectModel.find({ name: PROJECT_NAME }, function(err, docs) {
+		if (err) {
+			done(err);
+		} else {
+			callback(docs);
+		}
+	});
+}
+
 describe('controllers/project', function() {
 
 	beforeEach(function(done) {
@@ -15,62 +45,37 @@ describe('controllers/project', function() {
 		connection.once('open', function callback () {
 			done();
 		});
+
 	});
 
 	it('should create a project with no retrospectives', function(done) {
 
-		var projectName = "testProject";
-
-		//req "stub"
-		var req = {
-			body: {
-				projectName: projectName
-			},
-			assert: function(val1, val2) {
-				return {
-					notEmpty: function() {
-						return true;
-					}
-				}
-			},
-			validationErrors: function() {
-				return null;
-			}
-		};
-
-		//result "stub"
+		var req = getRequestStub();
 		var res = {
-			render: function(name, obj) {
-				done(new Error("render called instead of redirect"));
-				return '';
-			},
 			redirect: function(url) {
 				checkForProjectInModel();
 			}
 		};
 
-		//next "stub"
-		var next = function(callback) {
-			done(new Error("next called instead of redirect"));
-		};
+		project.createProject(req, res, null);
 
-		//create project
-		project.createProject(req, res, next);
-
-		//callback after project is created
 		function checkForProjectInModel() {
-
-			var projectFoundInModel = false;
-			ProjectModel.find({ name: projectName }, function(err, docs) {
-				if (err) {
-					done(err);
-				} else {
-					docs.length.should.equal(1);
-					done();
-				}
-			});	
-
+			fetchProjectsFromDB(done, function(projects) {
+				projects.length.should.equal(1);
+				done();
+			});
 		}
+
+	});
+
+	it('should not create a project if there are validation errors', function(done) {
+
+		var req = getRequestStub();
+		req.validationErrors = []; //fake validation errors
+		fetchProjectsFromDB(done, function(projects) {
+			projects.length.should.equal(0);
+			done();
+		});
 
 	});
 
