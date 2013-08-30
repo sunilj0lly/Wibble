@@ -1,5 +1,6 @@
 var should = require('should');
 var project = require('../../controllers/project');
+var ProjectModel = require('../../models/project')
 var sinon = require("sinon");
 var mongoose = require('mongoose');
 
@@ -18,9 +19,12 @@ describe('controllers/project', function() {
 
 	it('should create a project with no retrospectives', function(done) {
 
+		var projectName = "testProject";
+
+		//req "stub"
 		var req = {
 			body: {
-				projectName: 'myTestProjectAgain'
+				projectName: projectName
 			},
 			assert: function(val1, val2) {
 				return {
@@ -34,25 +38,44 @@ describe('controllers/project', function() {
 			}
 		};
 
+		//result "stub"
 		var res = {
 			render: function(name, obj) {
-				done();
+				done(new Error("render called instead of redirect"));
 				return '';
 			},
 			redirect: function(url) {
-				done();
+				checkForProjectInModel();
 			}
 		};
 
+		//next "stub"
 		var next = function(callback) {
-			done();
+			done(new Error("next called instead of redirect"));
 		};
 
+		//create project
 		project.createProject(req, res, next);
+
+		//callback after project is created
+		function checkForProjectInModel() {
+
+			var projectFoundInModel = false;
+			ProjectModel.find({ name: projectName }, function(err, docs) {
+				if (err) {
+					done(err);
+				} else {
+					docs.length.should.equal(1);
+					done();
+				}
+			});	
+
+		}
+
 	});
 
 	afterEach(function() {
 		mongoose.connection.db.dropDatabase();
 	});
 
-})
+});
