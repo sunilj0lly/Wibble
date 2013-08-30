@@ -71,11 +71,48 @@ describe('controllers/project', function() {
 	it('should not create a project if there are validation errors', function(done) {
 
 		var req = getRequestStub();
-		req.validationErrors = []; //fake validation errors
+		req.validationErrors = function() {
+			return true;
+		}
+
+		var res = {
+			render: function(url) {
+				//do nothing
+			}
+		};
+
+		project.createProject(req, res, null);
+
 		fetchProjectsFromDB(done, function(projects) {
 			projects.length.should.equal(0);
 			done();
 		});
+
+	});
+
+	it('should not create another project when one already exists', function(done) {
+
+		var req = getRequestStub();
+		var firstRes = {
+			redirect: function(url) {
+				project.createProject(req, secondRes, null);
+			}
+		};
+
+		var secondRes = {
+			render: function(url, obj) {
+				checkForProjectInModel();
+			}
+		};
+
+		project.createProject(req, firstRes, null);
+
+		function checkForProjectInModel() {
+			fetchProjectsFromDB(done, function(projects) {
+				projects.length.should.equal(1);
+				done();
+			});
+		}
 
 	});
 
